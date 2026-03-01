@@ -3,11 +3,13 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const Dish = require('../models/Dish');
 const { protect } = require('../middleware/auth');
 
 // Setup multer for image uploads
-const uploadDir = path.join(__dirname, '../uploads');
+// Use os.tmpdir() so it works on Vercel (/tmp) and Windows locally
+const uploadDir = path.join(os.tmpdir(), 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({

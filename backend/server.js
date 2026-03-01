@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const os = require('os');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -20,7 +21,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded images statically
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const uploadsDir = path.join(os.tmpdir(), 'uploads');
+app.use('/uploads', express.static(uploadsDir));
 
 // Routes
 app.use('/api/auth', authRoutes);
