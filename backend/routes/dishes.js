@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const mongoose = require('mongoose');
 const Dish = require('../models/Dish');
 const { protect } = require('../middleware/auth');
 
@@ -35,12 +36,32 @@ const upload = multer({
 // GET /api/dishes/all - Public: all available dishes with caterer info
 router.get('/all', async (req, res) => {
   try {
+    console.log('Fetching all available dishes...');
     const dishes = await Dish.find({ isAvailable: true })
       .populate('catererId', 'businessName city phone _id')
       .sort({ category: 1, name: 1 });
+    console.log(`Found ${dishes.length} dishes`);
     res.json({ dishes });
   } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
+    console.error('Error fetching dishes:', err);
+    res.status(500).json({ message: 'Server error.', error: err.message });
+  }
+});
+
+// GET /api/dishes/test - Test endpoint to debug database connection
+router.get('/test', async (req, res) => {
+  try {
+    console.log('Testing database connection...');
+    const dishCount = await Dish.countDocuments();
+    const catererCount = await mongoose.model('Caterer').countDocuments();
+    res.json({ 
+      message: 'Database connection working',
+      dishCount,
+      catererCount
+    });
+  } catch (err) {
+    console.error('Database test failed:', err);
+    res.status(500).json({ message: 'Database connection failed', error: err.message });
   }
 });
 
