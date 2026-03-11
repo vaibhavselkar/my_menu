@@ -13,6 +13,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [selectedNames, setSelectedNames] = useState(new Set());
   const [plates, setPlates] = useState(50);
+  const [cityFilter, setCityFilter] = useState('');
+  const [vegFilter, setVegFilter] = useState(''); // '' for all, 'true' for veg, 'false' for non-veg
 
   useEffect(() => {
     api.get('/dishes/all')
@@ -54,15 +56,33 @@ export default function HomePage() {
       byCaterer[cId].dishes.push(dish);
     });
 
-    return Object.values(byCaterer)
+    let results = Object.values(byCaterer)
       .map(({ caterer, dishes }) => {
         const matched = dishes.filter(d => selectedNames.has(d.name));
         const menuPricePerPlate = matched.reduce((s, d) => s + d.pricePerPlate, 0);
         return { caterer, matched, menuPricePerPlate, totalPrice: menuPricePerPlate * plates };
       })
-      .filter(r => r.matched.length > 0)
-      .sort((a, b) => b.matched.length - a.matched.length);
-  }, [allDishes, selectedNames, plates]);
+      .filter(r => r.matched.length > 0);
+
+    // Apply city filter if provided
+    if (cityFilter.trim()) {
+      const cityLower = cityFilter.toLowerCase().trim();
+      results = results.filter(r => 
+        r.caterer.city.toLowerCase().includes(cityLower)
+      );
+    }
+
+    // Apply veg/non-veg filter if provided
+    if (vegFilter !== '') {
+      const isVeg = vegFilter === 'true';
+      results = results.filter(r => {
+        // Check if all matched dishes match the selected type
+        return r.matched.every(d => d.isVeg === isVeg);
+      });
+    }
+
+    return results.sort((a, b) => b.matched.length - a.matched.length);
+  }, [allDishes, selectedNames, plates, cityFilter, vegFilter]);
 
   const orderedCategories = CATEGORY_ORDER.filter(c => groupedDishes[c]);
 
@@ -104,12 +124,34 @@ export default function HomePage() {
                     </span>
                   )}
                   <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-1.5">
+                    <span className="text-sm text-gray-500 shrink-0">City:</span>
+                    <input
+                      type="text"
+                      value={cityFilter}
+                      onChange={(e) => setCityFilter(e.target.value)}
+                      placeholder="e.g. Mumbai"
+                      className="w-24 text-sm font-semibold outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-1.5">
                     <span className="text-sm text-gray-500 shrink-0">Plates:</span>
                     <input
                       type="number" min="1" value={plates}
                       onChange={e => setPlates(Math.max(1, Number(e.target.value)))}
                       className="w-16 text-sm font-semibold text-center outline-none"
                     />
+                  </div>
+                  <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-1.5">
+                    <span className="text-sm text-gray-500 shrink-0">Type:</span>
+                    <select
+                      value={vegFilter}
+                      onChange={(e) => setVegFilter(e.target.value)}
+                      className="text-sm font-semibold outline-none bg-transparent"
+                    >
+                      <option value="">All</option>
+                      <option value="true">Veg</option>
+                      <option value="false">Non-Veg</option>
+                    </select>
                   </div>
                   {selectedNames.size > 0 && (
                     <button

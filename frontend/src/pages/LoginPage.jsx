@@ -80,7 +80,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Don't have an account?{' '}
-          <Link to="/register" className="text-saffron-600 font-semibold hover:underline">Register here</Link>
+          <Link to="/register" className="text-saffron-600 font-semibold hover:underline">Register as Caterer</Link>
         </p>
       </div>
     </div>

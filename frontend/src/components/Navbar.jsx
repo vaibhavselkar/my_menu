@@ -48,22 +48,13 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 hover:text-saffron-600 hover:bg-saffron-50 rounded-lg transition-colors"
-                >
-                  <LogIn size={16} />
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-saffron-500 hover:bg-saffron-600 rounded-lg transition-colors"
-                >
-                  <UserPlus size={16} />
-                  Register
-                </Link>
-              </>
+              <Link
+                to="/login"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-saffron-500 hover:bg-saffron-600 rounded-lg transition-colors"
+              >
+                <LogIn size={16} />
+                Login as Caterer
+              </Link>
             )}
           </div>
         </div>
