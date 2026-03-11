@@ -15,18 +15,33 @@ export default function HomePage() {
   const [plates, setPlates] = useState(50);
   const [cityFilter, setCityFilter] = useState('');
   const [vegFilter, setVegFilter] = useState(''); // '' for all, 'true' for veg, 'false' for non-veg
+  const [availableCities, setAvailableCities] = useState([]);
 
   useEffect(() => {
     api.get('/dishes/all')
-      .then(res => setAllDishes(res.data.dishes))
+      .then(res => {
+        setAllDishes(res.data.dishes);
+        
+        // Extract unique cities for dropdown
+        const cities = [...new Set(res.data.dishes.map(d => d.catererId.city))]
+          .filter(city => city && city.trim())
+          .sort();
+        setAvailableCities(cities);
+      })
       .catch(() => setAllDishes([]))
       .finally(() => setLoading(false));
   }, []);
 
-  // Group all dishes by category (unique dish names per category)
+  // Group all dishes by category (unique dish names per category) with filtering
   const groupedDishes = useMemo(() => {
     const map = {};
     allDishes.forEach(dish => {
+      // Apply veg/non-veg filter to food items
+      if (vegFilter !== '') {
+        const isVeg = vegFilter === 'true';
+        if (dish.isVeg !== isVeg) return; // Skip dishes that don't match the filter
+      }
+
       if (!map[dish.category]) map[dish.category] = [];
       // Only add unique names to the picker
       if (!map[dish.category].find(d => d.name === dish.name)) {
@@ -34,7 +49,7 @@ export default function HomePage() {
       }
     });
     return map;
-  }, [allDishes]);
+  }, [allDishes, vegFilter]);
 
   const toggleItem = (name) => {
     setSelectedNames(prev => {
@@ -125,13 +140,16 @@ export default function HomePage() {
                   )}
                   <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-1.5">
                     <span className="text-sm text-gray-500 shrink-0">City:</span>
-                    <input
-                      type="text"
+                    <select
                       value={cityFilter}
                       onChange={(e) => setCityFilter(e.target.value)}
-                      placeholder="e.g. Mumbai"
-                      className="w-24 text-sm font-semibold outline-none"
-                    />
+                      className="text-sm font-semibold outline-none bg-transparent"
+                    >
+                      <option value="">All Cities</option>
+                      {availableCities.map(city => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-1.5">
                     <span className="text-sm text-gray-500 shrink-0">Plates:</span>
@@ -266,7 +284,7 @@ export default function HomePage() {
 
                       {/* Actions */}
                       <Link
-                        to={`/caterer/${caterer._id}`}
+                        to={`/caterer/${caterer._id}?selected=${encodeURIComponent(JSON.stringify(Array.from(selectedNames)))}&plates=${plates}&city=${encodeURIComponent(cityFilter)}&veg=${vegFilter}`}
                         className="flex items-center justify-center gap-1.5 border-2 border-saffron-200 text-saffron-600 hover:bg-saffron-50 font-semibold py-2 rounded-xl transition-colors text-sm"
                       >
                         <ExternalLink size={14} /> View Full Menu & Enquire

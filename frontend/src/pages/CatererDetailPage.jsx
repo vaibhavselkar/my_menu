@@ -1,26 +1,122 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { MapPin, Phone, ChefHat, ArrowLeft, Mail } from 'lucide-react';
+import { useParams, Link, useLocation } from 'react-router-dom';
+import { MapPin, Phone, ChefHat, ArrowLeft, Mail, RefreshCw } from 'lucide-react';
 import api from '../utils/api.js';
 import EnquiryPanel from '../components/EnquiryPanel.jsx';
 
 export default function CatererDetailPage() {
   const { id } = useParams();
+  const location = useLocation();
   const [caterer, setCaterer] = useState(null);
   const [dishes, setDishes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedItems, setSelectedItems] = useState([]);
+  const [alternativeSuggestions, setAlternativeSuggestions] = useState([]);
 
   useEffect(() => {
     api.get(`/caterers/${id}`)
       .then(res => {
         setCaterer(res.data.caterer);
         setDishes(res.data.dishes);
+        
+        // Process URL parameters after data is loaded
+        processUrlParameters(res.data.dishes);
       })
       .catch(() => setError('Caterer not found.'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Process URL parameters and set initial state
+  const processUrlParameters = (catererDishes) => {
+    const params = new URLSearchParams(location.search);
+    const selectedParam = params.get('selected');
+    const platesParam = params.get('plates');
+    const cityParam = params.get('city');
+    const vegParam = params.get('veg');
+
+    if (selectedParam) {
+      try {
+        const selectedNames = JSON.parse(decodeURIComponent(selectedParam));
+        const selectedDishes = [];
+        const unavailableItems = [];
+
+        // Find available items from the selected list
+        selectedNames.forEach(name => {
+          const foundDish = catererDishes.find(d => d.name === name);
+          if (foundDish) {
+            selectedDishes.push(foundDish);
+          } else {
+            unavailableItems.push(name);
+          }
+        });
+
+        setSelectedItems(selectedDishes);
+
+        // Get alternatives for unavailable items
+        if (unavailableItems.length > 0) {
+          getAlternativeSuggestions(unavailableItems, catererDishes, vegParam);
+        }
+      } catch (err) {
+        console.error('Error parsing URL parameters:', err);
+      }
+    }
+  };
+
+  // Get alternative suggestions for unavailable items
+  const getAlternativeSuggestions = async (unavailableItems, catererDishes, vegFilter) => {
+    try {
+      // Get all dishes from other caterers for suggestions
+      const allDishesRes = await api.get('/dishes/all');
+      const allDishes = allDishesRes.data.dishes;
+
+      const suggestions = [];
+
+      unavailableItems.forEach(item => {
+        // Find similar dishes (same category, similar name or same type)
+        const similarDishes = allDishes.filter(dish => {
+          // Exclude the current caterer's dishes
+          if (dish.catererId._id === id) return false;
+          
+          // Filter by veg type if specified
+          if (vegFilter === 'true' && !dish.isVeg) return false;
+          if (vegFilter === 'false' && dish.isVeg) return false;
+
+          // Match by category or similar name patterns
+          const currentItem = catererDishes.find(c => c.name === item);
+          if (currentItem && dish.category === currentItem.category) return true;
+          
+          // Fallback: check if it's a common dish type
+          const commonPatterns = ['Paneer', 'Chicken', 'Mutton', 'Fish', 'Egg', 'Dal', 'Rice', 'Biryani'];
+          return commonPatterns.some(pattern => 
+            dish.name.toLowerCase().includes(pattern.toLowerCase()) ||
+            item.toLowerCase().includes(pattern.toLowerCase())
+          );
+        });
+
+        // Group by caterer and take best options
+        const byCaterer = {};
+        similarDishes.forEach(dish => {
+          if (!byCaterer[dish.catererId._id]) {
+            byCaterer[dish.catererId._id] = {
+              caterer: dish.catererId,
+              dishes: []
+            };
+          }
+          byCaterer[dish.catererId._id].dishes.push(dish);
+        });
+
+        suggestions.push({
+          originalItem: item,
+          alternatives: Object.values(byCaterer).slice(0, 3) // Show top 3 caterers
+        });
+      });
+
+      setAlternativeSuggestions(suggestions);
+    } catch (err) {
+      console.error('Error getting alternatives:', err);
+    }
+  };
 
   const toggleItem = (dish) => {
     setSelectedItems(prev =>
@@ -155,6 +251,60 @@ export default function CatererDetailPage() {
                         </label>
                       );
                     })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Alternative Suggestions */}
+          {alternativeSuggestions.length > 0 && (
+            <div className="mt-10">
+              <div className="flex items-center gap-3 mb-4">
+                <RefreshCw size={20} className="text-saffron-500" />
+                <h3 className="font-display font-bold text-xl text-gray-900">Alternative Options</h3>
+              </div>
+              
+              {alternativeSuggestions.map((suggestion, index) => (
+                <div key={index} className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-sm text-gray-500">Instead of:</span>
+                    <span className="font-semibold text-red-600">{suggestion.originalItem}</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {suggestion.alternatives.map((alt, altIndex) => (
+                      <div key={altIndex} className="border border-gray-200 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-8 h-8 bg-saffron-50 rounded-lg flex items-center justify-center">
+                            <ChefHat size={14} className="text-saffron-400" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-sm text-gray-900">{alt.caterer.businessName}</h4>
+                            <p className="text-xs text-gray-500">{alt.caterer.city}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          {alt.dishes.slice(0, 2).map(dish => (
+                            <div key={dish._id} className="flex items-center justify-between text-xs">
+                              <span className="text-gray-700">{dish.name}</span>
+                              <span className="font-medium text-saffron-600">₹{dish.pricePerPlate}</span>
+                            </div>
+                          ))}
+                          {alt.dishes.length > 2 && (
+                            <div className="text-xs text-gray-400 text-center">+{alt.dishes.length - 2} more</div>
+                          )}
+                        </div>
+                        
+                        <Link
+                          to={`/caterer/${alt.caterer._id}?selected=${encodeURIComponent(JSON.stringify([suggestion.originalItem]))}&plates=${platesParam || 50}&city=${cityParam || ''}&veg=${vegParam || ''}`}
+                          className="w-full mt-2 inline-flex items-center justify-center gap-1.5 border border-saffron-200 text-saffron-600 hover:bg-saffron-50 font-semibold py-1.5 rounded-lg text-xs transition-colors"
+                        >
+                          View Menu
+                        </Link>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}

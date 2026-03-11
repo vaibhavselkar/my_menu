@@ -1,12 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, ShoppingCart, Calculator } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../utils/api.js';
 
 export default function EnquiryPanel({ caterer, selectedItems, onRemoveItem }) {
+  const location = useLocation();
   const [plates, setPlates] = useState(50);
   const [form, setForm] = useState({ customerName: '', customerPhone: '', eventDate: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
+
+  // Initialize plates from URL parameters
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const platesParam = params.get('plates');
+    if (platesParam) {
+      setPlates(Math.max(1, Number(platesParam)));
+    }
+  }, [location.search]);
 
   const menuPricePerPlate = selectedItems.reduce((sum, d) => sum + d.pricePerPlate, 0);
   const totalPrice = menuPricePerPlate * plates;
