@@ -13,6 +13,7 @@ export default function CatererDetailPage() {
   const [error, setError] = useState('');
   const [selectedItems, setSelectedItems] = useState([]);
   const [alternativeSuggestions, setAlternativeSuggestions] = useState([]);
+  const [urlParams, setUrlParams] = useState({ plates: 50, city: '', veg: '' });
 
   useEffect(() => {
     api.get(`/caterers/${id}`)
@@ -34,6 +35,13 @@ export default function CatererDetailPage() {
     const platesParam = params.get('plates');
     const cityParam = params.get('city');
     const vegParam = params.get('veg');
+
+    // Store URL parameters in state for use throughout the component
+    setUrlParams({
+      plates: platesParam ? parseInt(platesParam) : 50,
+      city: cityParam || '',
+      veg: vegParam || ''
+    });
 
     if (selectedParam) {
       try {
@@ -298,7 +306,7 @@ export default function CatererDetailPage() {
                         </div>
                         
                         <Link
-                          to={`/caterer/${alt.caterer._id}?selected=${encodeURIComponent(JSON.stringify([suggestion.originalItem]))}&plates=${platesParam || 50}&city=${cityParam || ''}&veg=${vegParam || ''}`}
+                          to={`/caterer/${alt.caterer._id}?selected=${encodeURIComponent(JSON.stringify([suggestion.originalItem]))}&plates=${urlParams.plates}&city=${urlParams.city}&veg=${urlParams.veg}`}
                           className="w-full mt-2 inline-flex items-center justify-center gap-1.5 border border-saffron-200 text-saffron-600 hover:bg-saffron-50 font-semibold py-1.5 rounded-lg text-xs transition-colors"
                         >
                           View Menu
