@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const catererRoutes = require('./routes/caterers');
 const dishRoutes = require('./routes/dishes');
 const enquiryRoutes = require('./routes/enquiries');
+const chatRoutes = require('./routes/chat');
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/caterers', catererRoutes);
 app.use('/api/dishes', dishRoutes);
 app.use('/api/enquiries', enquiryRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

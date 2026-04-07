@@ -6,6 +6,7 @@ import CatererDetailPage from './pages/CatererDetailPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
+import ChatBot from './components/ChatBot.jsx';
 import { useAuth } from './context/AuthContext.jsx';
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
+      <ChatBot />
     </div>
   );
 }
