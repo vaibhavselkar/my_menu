@@ -147,12 +147,27 @@ export default function ChatBot() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // Load cities once
+  // Load cities from DB — try sessionStorage cache first (populated by HomePage),
+  // then fall back to /caterers which always returns real DB data
   useEffect(() => {
     if (open && availableCities.length === 0) {
-      api.get('/dishes/all')
+      // 1. Try the same cache HomePage uses — already has real cities
+      try {
+        const cached = sessionStorage.getItem('cc_dishes_v1');
+        if (cached) {
+          const { dishes } = JSON.parse(cached);
+          const cities = [...new Set(dishes.map(d => d.catererId?.city).filter(Boolean))].sort();
+          if (cities.length > 0) {
+            setAvailableCities(cities);
+            return;
+          }
+        }
+      } catch { /* ignore */ }
+
+      // 2. Fallback: fetch caterers directly (no mock fallback risk)
+      api.get('/caterers')
         .then(res => {
-          const cities = [...new Set(res.data.dishes.map(d => d.catererId?.city).filter(Boolean))].sort();
+          const cities = [...new Set(res.data.caterers.map(c => c.city).filter(Boolean))].sort();
           setAvailableCities(cities);
         })
         .catch(() => {});
