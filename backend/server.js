@@ -10,7 +10,6 @@ const catererRoutes = require('./routes/caterers');
 const dishRoutes = require('./routes/dishes');
 const enquiryRoutes = require('./routes/enquiries');
 const chatRoutes = require('./routes/chat');
-const seedRoutes = require('./routes/seed');
 
 const app = express();
 
@@ -32,7 +31,6 @@ app.use('/api/caterers', catererRoutes);
 app.use('/api/dishes', dishRoutes);
 app.use('/api/enquiries', enquiryRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/seed', seedRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
