@@ -42,6 +42,8 @@ router.get('/all', async (req, res) => {
       .sort({ category: 1, name: 1 })
       .lean();
     console.log(`Found ${dishes.length} dishes`);
+    // Cache for 2 minutes on CDN, serve stale for up to 10 minutes while revalidating
+    res.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
     res.json({ dishes });
   } catch (err) {
     console.error('Error fetching dishes:', err);

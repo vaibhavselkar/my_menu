@@ -18,17 +18,44 @@ export default function HomePage() {
   const [availableCities, setAvailableCities] = useState([]);
 
   useEffect(() => {
+    const CACHE_KEY = 'cc_dishes_v1';
+    const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
+    // Show cached data instantly while fetching fresh in background
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { dishes, ts } = JSON.parse(cached);
+        if (Date.now() - ts < CACHE_TTL) {
+          setAllDishes(dishes);
+          const cities = [...new Set(dishes.map(d => d.catererId.city))]
+            .filter(c => c && c.trim()).sort();
+          setAvailableCities(cities);
+          setLoading(false);
+          return; // cache is fresh — skip network call entirely
+        }
+        // Cache is stale — show it instantly, then refresh in background
+        setAllDishes(dishes);
+        const cities = [...new Set(dishes.map(d => d.catererId.city))]
+          .filter(c => c && c.trim()).sort();
+        setAvailableCities(cities);
+        setLoading(false);
+      }
+    } catch { /* sessionStorage unavailable */ }
+
+    // Fetch fresh data (background if cache shown, foreground if not)
     api.get('/dishes/all')
       .then(res => {
-        setAllDishes(res.data.dishes);
-        
-        // Extract unique cities for dropdown
-        const cities = [...new Set(res.data.dishes.map(d => d.catererId.city))]
-          .filter(city => city && city.trim())
-          .sort();
+        const dishes = res.data.dishes;
+        setAllDishes(dishes);
+        const cities = [...new Set(dishes.map(d => d.catererId.city))]
+          .filter(c => c && c.trim()).sort();
         setAvailableCities(cities);
+        try {
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ dishes, ts: Date.now() }));
+        } catch { /* storage full or unavailable */ }
       })
-      .catch(() => setAllDishes([]))
+      .catch(() => { if (!allDishes.length) setAllDishes([]); })
       .finally(() => setLoading(false));
   }, []);
 
