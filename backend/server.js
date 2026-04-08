@@ -51,7 +51,6 @@ const connectDB = async () => {
 
   if (!global._mongoConn.promise) {
     global._mongoConn.promise = mongoose.connect(MONGO_URI, {
-      bufferCommands: false,
       maxPoolSize: 10,
     }).then(m => {
       console.log('✅ MongoDB connected');
@@ -62,6 +61,17 @@ const connectDB = async () => {
   global._mongoConn.conn = await global._mongoConn.promise;
   return global._mongoConn.conn;
 };
+
+// Ensure DB is connected before every request (critical for Vercel serverless)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('DB connection failed:', err.message);
+    res.status(500).json({ message: 'Database connection failed.' });
+  }
+});
 
 // Local development: start server
 if (require.main === module) {
