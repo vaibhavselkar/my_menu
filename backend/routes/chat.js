@@ -89,6 +89,10 @@ router.post('/suggest', async (req, res) => {
       return res.status(400).json({ message: 'eventType and plates are required.' });
     }
 
+    if (!process.env.GROQ_API) {
+      return res.status(500).json({ message: 'GROQ_API environment variable is not set on the server.' });
+    }
+
     // Fetch all dishes with caterer info
     const allDishes = await Dish.find({ isAvailable: true })
       .populate('catererId', 'businessName ownerName city phone email profileImage')
