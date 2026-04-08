@@ -52,4 +52,12 @@ const dishSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Indexes for fast queries
+// Most common query: filter by isAvailable, sort by category + name
+dishSchema.index({ isAvailable: 1, category: 1, name: 1 });
+// Dashboard: fetch all dishes for a caterer
+dishSchema.index({ catererId: 1, isAvailable: 1 });
+// Chat AI route: filter by isVeg within available dishes
+dishSchema.index({ isAvailable: 1, isVeg: 1 });
+
 module.exports = mongoose.model('Dish', dishSchema);

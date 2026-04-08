@@ -53,7 +53,8 @@ router.post('/', async (req, res) => {
 router.get('/my', protect, async (req, res) => {
   try {
     const enquiries = await Enquiry.find({ catererId: req.caterer._id })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ enquiries });
   } catch (err) {
     res.status(500).json({ message: 'Server error.' });

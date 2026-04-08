@@ -90,7 +90,9 @@ router.post('/suggest', async (req, res) => {
     }
 
     // Fetch all dishes with caterer info
-    const allDishes = await Dish.find({ isAvailable: true }).populate('catererId', 'businessName ownerName city phone email profileImage');
+    const allDishes = await Dish.find({ isAvailable: true })
+      .populate('catererId', 'businessName ownerName city phone email profileImage')
+      .lean();
 
     if (allDishes.length === 0) {
       return res.json({ suggestedNames: [], caterers: [] });
@@ -100,35 +102,33 @@ router.post('/suggest', async (req, res) => {
     const vegLabel = isVeg === true ? 'Pure Vegetarian' : isVeg === false ? 'Non-Vegetarian' : 'Mixed (Veg + Non-Veg)';
     const cityNote = city ? `The event is in ${city}.` : 'The event city is not specified.';
 
-    const systemPrompt = `You are a professional Indian catering menu consultant for CaterConnect India, a platform that connects customers with local caterers.
-
-Your job is to suggest the BEST combination of dishes from the available catalog for a given event. You must:
-1. Pick a balanced, authentic Indian menu suited to the occasion
-2. Choose dishes that complement each other well (e.g., dal + rice + bread together, not three similar mains)
-3. Ensure variety across courses (starters, mains, sides, desserts, beverages)
-4. Respect the veg/non-veg preference strictly
-5. Choose popular, crowd-pleasing dishes for the occasion
-6. Return ONLY a valid JSON array of dish names — no explanation, no markdown, no extra text
-
-Example output format: ["Paneer Tikka", "Dal Makhani", "Jeera Rice", "Naan", "Gulab Jamun", "Masala Chai"]`;
+    const systemPrompt = `You are a professional Indian catering menu consultant for CaterConnect India.
+Your job is to suggest the BEST combination of dishes from the provided catalog for a given event.
+Rules:
+1. Only pick dishes that appear EXACTLY in the catalog — do not invent names
+2. Choose a balanced menu: starters, mains, breads/rice, sweets/desserts, beverages
+3. Dishes should complement each other (e.g. dal + rice + bread, not three similar curries)
+4. Strictly respect veg/non-veg preference
+5. Pick crowd-pleasing choices suited to the occasion and scale
+6. Respond with ONLY a JSON object in this exact format: {"dishes": ["Dish One", "Dish Two", ...]}
+   No explanation, no markdown, no extra keys.`;
 
     const userPrompt = `Event: ${eventType}
 Preference: ${vegLabel}
 Guests: ${plates}
 ${cityNote}
 
-Available Dishes Catalog:
+Available Dishes:
 ${dishCatalog}
 
-Based on this event and guest count, suggest the IDEAL combination of dishes from the catalog above.
-For ${plates} guests at a ${eventType}, pick appropriate quantities:
+Pick the ideal menu for this event. Target:
 - Starters: 2-4 items
 - Main Course: 3-5 items
 - Breads/Rice: 2-3 items
 - Sweets/Desserts: 2-3 items
 - Beverages: 1-2 items
 
-Return ONLY a JSON array of the selected dish names exactly as they appear in the catalog.`;
+Respond ONLY with: {"dishes": ["exact name from catalog", ...]}`;
 
     // Call Groq API
     const groqResponse = await axios.post(
@@ -139,36 +139,40 @@ Return ONLY a JSON array of the selected dish names exactly as they appear in th
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.4,
-        max_tokens: 512,
-        response_format: { type: 'json_object' },
+        temperature: 0.3,
+        max_tokens: 600,
       },
       {
         headers: {
           Authorization: `Bearer ${process.env.GROQ_API}`,
           'Content-Type': 'application/json',
         },
-        timeout: 15000,
+        timeout: 30000,
       }
     );
 
     const rawContent = groqResponse.data.choices[0].message.content.trim();
+    console.log('Groq raw response:', rawContent);
 
-    // Parse JSON — Groq returns json_object so we may get { dishes: [...] } or directly [...]
+    // Parse JSON — expect {"dishes": [...]}
     let suggestedNames = [];
     try {
       const parsed = JSON.parse(rawContent);
       if (Array.isArray(parsed)) {
         suggestedNames = parsed;
+      } else if (parsed.dishes && Array.isArray(parsed.dishes)) {
+        suggestedNames = parsed.dishes;
       } else {
-        // Find the first array value in the object
+        // Find any array value in the object
         const firstArray = Object.values(parsed).find(v => Array.isArray(v));
         suggestedNames = firstArray || [];
       }
     } catch {
-      // Fallback: try to extract array from string
-      const match = rawContent.match(/\[[\s\S]*\]/);
-      if (match) suggestedNames = JSON.parse(match[0]);
+      // Fallback: extract array from raw string if model added extra text
+      const match = rawContent.match(/\[[\s\S]*?\]/);
+      if (match) {
+        try { suggestedNames = JSON.parse(match[0]); } catch { suggestedNames = []; }
+      }
     }
 
     // Validate: only keep names that actually exist in the DB
@@ -180,8 +184,12 @@ Return ONLY a JSON array of the selected dish names exactly as they appear in th
 
     res.json({ suggestedNames, caterers });
   } catch (err) {
-    console.error('Groq chat error:', err.response?.data || err.message);
-    res.status(500).json({ message: 'AI suggestion failed. Please try again.' });
+    const detail = err.response?.data || err.message;
+    console.error('Groq chat error:', JSON.stringify(detail, null, 2));
+    res.status(500).json({
+      message: 'AI suggestion failed. Please try again.',
+      detail: process.env.NODE_ENV !== 'production' ? detail : undefined,
+    });
   }
 });
 

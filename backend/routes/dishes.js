@@ -39,7 +39,8 @@ router.get('/all', async (req, res) => {
     console.log('Fetching all available dishes...');
     const dishes = await Dish.find({ isAvailable: true })
       .populate('catererId', 'businessName city phone _id')
-      .sort({ category: 1, name: 1 });
+      .sort({ category: 1, name: 1 })
+      .lean();
     console.log(`Found ${dishes.length} dishes`);
     res.json({ dishes });
   } catch (err) {
@@ -68,7 +69,7 @@ router.get('/test', async (req, res) => {
 // GET /api/dishes/my - Get current caterer's dishes (protected)
 router.get('/my', protect, async (req, res) => {
   try {
-    const dishes = await Dish.find({ catererId: req.caterer._id }).sort({ category: 1, name: 1 });
+    const dishes = await Dish.find({ catererId: req.caterer._id }).sort({ category: 1, name: 1 }).lean();
     res.json({ dishes });
   } catch (err) {
     res.status(500).json({ message: 'Server error.' });

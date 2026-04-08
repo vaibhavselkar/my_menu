@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    const caterers = await Caterer.find(filter).select('-password').sort({ createdAt: -1 });
+    const caterers = await Caterer.find(filter).select('-password').sort({ createdAt: -1 }).lean();
     res.json({ caterers });
   } catch (err) {
     res.status(500).json({ message: 'Server error.' });

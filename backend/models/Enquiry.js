@@ -59,4 +59,10 @@ const enquirySchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Indexes for fast queries
+// Dashboard fetches all enquiries for a caterer, sorted by newest first
+enquirySchema.index({ catererId: 1, createdAt: -1 });
+// Filter by status (pending/confirmed/rejected) per caterer
+enquirySchema.index({ catererId: 1, status: 1 });
+
 module.exports = mongoose.model('Enquiry', enquirySchema);

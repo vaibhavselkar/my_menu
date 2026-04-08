@@ -60,6 +60,12 @@ const catererSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Indexes for fast queries
+// City filter is used on the homepage and in caterer search
+catererSchema.index({ city: 1 });
+// Search by businessName or description
+catererSchema.index({ businessName: 1 });
+
 // Hash password before saving
 catererSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
