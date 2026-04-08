@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PlusCircle, Pencil, Trash2, LayoutDashboard, User, ExternalLink, ClipboardList, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2, LayoutDashboard, User, ExternalLink, ClipboardList, CheckCircle, XCircle, Clock, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../utils/api.js';
@@ -38,6 +38,11 @@ export default function DashboardPage() {
   // Enquiries state
   const [enquiries, setEnquiries] = useState([]);
   const [loadingEnquiries, setLoadingEnquiries] = useState(false);
+
+  // Calendar state
+  const [blockedDates, setBlockedDates] = useState(new Set(caterer?.blockedDates || []));
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [savingDates, setSavingDates] = useState(false);
 
   useEffect(() => {
     api.get('/dishes/my')
@@ -83,6 +88,35 @@ export default function DashboardPage() {
     } finally {
       setDeleteId(null);
     }
+  };
+
+  // Calendar helpers
+  const toggleDate = (dateStr) => {
+    setBlockedDates(prev => {
+      const next = new Set(prev);
+      next.has(dateStr) ? next.delete(dateStr) : next.add(dateStr);
+      return next;
+    });
+  };
+
+  const handleSaveDates = async () => {
+    setSavingDates(true);
+    try {
+      await api.put('/auth/blocked-dates', { blockedDates: Array.from(blockedDates) });
+      toast.success('Availability saved!');
+    } catch {
+      toast.error('Failed to save availability');
+    } finally {
+      setSavingDates(false);
+    }
+  };
+
+  const calDays = () => {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    const first = new Date(year, month, 1).getDay();
+    const total = new Date(year, month + 1, 0).getDate();
+    return { year, month, first, total };
   };
 
   const handleProfileChange = e => setProfile(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -139,6 +173,14 @@ export default function DashboardPage() {
               {enquiries.filter(e => e.status === 'pending').length}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setTab('calendar')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            tab === 'calendar' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <CalendarDays size={15} /> Availability
         </button>
         <button
           onClick={() => setTab('profile')}
@@ -238,11 +280,14 @@ export default function DashboardPage() {
                   <div key={enq._id} className="bg-white rounded-2xl border border-gray-200 p-5">
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
                       <div>
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <h3 className="font-semibold text-gray-900">{enq.customerName}</h3>
                           <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${statusStyle}`}>
                             <StatusIcon size={11} />
                             {enq.status.charAt(0).toUpperCase() + enq.status.slice(1)}
+                          </span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${enq.type === 'order' ? 'bg-saffron-100 text-saffron-700' : 'bg-blue-50 text-blue-600'}`}>
+                            {enq.type === 'order' ? '🛒 Order' : '💬 Enquiry'}
                           </span>
                         </div>
                         <p className="text-sm text-gray-500">{enq.customerPhone}</p>
@@ -296,6 +341,107 @@ export default function DashboardPage() {
           )}
         </div>
       )}
+
+      {/* Calendar / Availability Tab */}
+      {tab === 'calendar' && (() => {
+        const { year, month, first, total } = calDays();
+        const today = new Date().toISOString().split('T')[0];
+        const monthName = new Date(year, month).toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+        const blanks = Array(first).fill(null);
+        const days = Array.from({ length: total }, (_, i) => i + 1);
+
+        return (
+          <div className="max-w-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-display font-bold text-xl text-gray-800">Availability Calendar</h2>
+                <p className="text-sm text-gray-400 mt-0.5">Click a date to mark it as blocked (unavailable). Click again to unblock.</p>
+              </div>
+              <button
+                onClick={handleSaveDates}
+                disabled={savingDates}
+                className="flex items-center gap-2 bg-saffron-500 hover:bg-saffron-600 disabled:opacity-60 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+              >
+                {savingDates ? 'Saving...' : 'Save Availability'}
+              </button>
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center gap-4 mb-4 text-xs text-gray-500">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-white border border-gray-200 inline-block" /> Available</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-100 border border-red-300 inline-block" /> Blocked</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-gray-100 border border-gray-200 inline-block" /> Past</span>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              {/* Month nav */}
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <ChevronLeft size={18} className="text-gray-500" />
+                </button>
+                <span className="font-display font-bold text-gray-900">{monthName}</span>
+                <button
+                  onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <ChevronRight size={18} className="text-gray-500" />
+                </button>
+              </div>
+
+              {/* Day headers */}
+              <div className="grid grid-cols-7 mb-1">
+                {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
+                  <div key={d} className="text-center text-xs font-semibold text-gray-400 py-1">{d}</div>
+                ))}
+              </div>
+
+              {/* Date cells */}
+              <div className="grid grid-cols-7 gap-1">
+                {blanks.map((_, i) => <div key={`b${i}`} />)}
+                {days.map(day => {
+                  const dateStr = `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                  const isPast = dateStr < today;
+                  const isBlocked = blockedDates.has(dateStr);
+                  const isToday = dateStr === today;
+
+                  return (
+                    <button
+                      key={day}
+                      onClick={() => !isPast && toggleDate(dateStr)}
+                      disabled={isPast}
+                      className={`
+                        aspect-square rounded-xl text-sm font-medium flex items-center justify-center transition-all
+                        ${isPast ? 'bg-gray-50 text-gray-300 cursor-not-allowed' :
+                          isBlocked ? 'bg-red-100 text-red-600 border border-red-300 hover:bg-red-200' :
+                          'bg-white border border-gray-200 text-gray-700 hover:border-saffron-300 hover:bg-saffron-50'}
+                        ${isToday && !isBlocked ? 'border-saffron-400 font-bold text-saffron-600' : ''}
+                      `}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {blockedDates.size > 0 && (
+              <div className="mt-4 bg-red-50 border border-red-100 rounded-xl p-4">
+                <p className="text-xs font-semibold text-red-600 mb-2">Blocked Dates ({blockedDates.size})</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {Array.from(blockedDates).sort().map(d => (
+                    <span key={d} className="text-xs bg-white border border-red-200 text-red-600 px-2 py-1 rounded-lg font-medium">
+                      {new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Profile Tab */}
       {tab === 'profile' && (

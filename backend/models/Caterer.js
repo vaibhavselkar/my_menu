@@ -55,6 +55,10 @@ const catererSchema = new mongoose.Schema({
   isVerified: {
     type: Boolean,
     default: true
+  },
+  blockedDates: {
+    type: [String], // stored as 'YYYY-MM-DD' strings
+    default: []
   }
 }, {
   timestamps: true

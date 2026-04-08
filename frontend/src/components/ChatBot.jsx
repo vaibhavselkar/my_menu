@@ -141,6 +141,7 @@ export default function ChatBot() {
 
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const sessionRef = useRef({ eventType: null, isVeg: null, plates: null, city: '' });
 
   // Scroll to bottom
   useEffect(() => {
@@ -221,6 +222,7 @@ export default function ChatBot() {
     setQuickReplies([]);
     addUser(opt.label);
     setSession(s => ({ ...s, eventType: opt.value }));
+    sessionRef.current = { ...sessionRef.current, eventType: opt.value };
 
     await showTyping(500);
     await botSay(EVENT_GREETINGS[opt.value]);
@@ -239,6 +241,7 @@ export default function ChatBot() {
     addUser(opt.label);
     const isVeg = opt.value === 'veg' ? true : opt.value === 'nonveg' ? false : null;
     setSession(s => ({ ...s, isVeg }));
+    sessionRef.current = { ...sessionRef.current, isVeg };
 
     await showTyping(500);
     await botSay('How many guests are you expecting? 👥');
@@ -250,7 +253,9 @@ export default function ChatBot() {
   const handleGuestsInput = async (val) => {
     const plates = parseInt(val) || 100;
     addUser(`${plates} guests`);
+    // store in ref so handleCitySelect can read the committed value immediately
     setSession(s => ({ ...s, plates }));
+    sessionRef.current = { ...sessionRef.current, plates };
     setAwaitingInput(false);
 
     await showTyping(500);
@@ -265,7 +270,7 @@ export default function ChatBot() {
       ]);
       setStep('city');
     } else {
-      await runAI({ ...session, plates, city: '' });
+      await runAI({ ...sessionRef.current, city: '' });
     }
   };
 
@@ -274,7 +279,8 @@ export default function ChatBot() {
     addUser(opt.value ? opt.label : 'Any City');
     const city = opt.value;
     setSession(s => ({ ...s, city }));
-    await runAI({ ...session, city });
+    sessionRef.current = { ...sessionRef.current, city };
+    await runAI({ ...sessionRef.current });
   };
 
   // ── AI call ───────────────────────────────────────────────────────────────
@@ -352,6 +358,7 @@ export default function ChatBot() {
     setAwaitingInput(false);
     setInputVal('');
     setSession({ eventType: null, isVeg: null, plates: null, city: '' });
+    sessionRef.current = { eventType: null, isVeg: null, plates: null, city: '' };
     setStep('idle');
     setTimeout(() => kickoff(), 300);
   };

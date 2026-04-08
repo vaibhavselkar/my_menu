@@ -326,6 +326,7 @@ export default function CatererDetailPage() {
             caterer={caterer}
             selectedItems={selectedItems}
             onRemoveItem={removeItem}
+            blockedDates={caterer.blockedDates || []}
           />
         </div>
       </div>

@@ -105,4 +105,22 @@ router.put('/profile', protect, async (req, res) => {
   }
 });
 
+// PUT /api/auth/blocked-dates - Save caterer's blocked dates
+router.put('/blocked-dates', protect, async (req, res) => {
+  try {
+    const { blockedDates } = req.body;
+    if (!Array.isArray(blockedDates)) {
+      return res.status(400).json({ message: 'blockedDates must be an array.' });
+    }
+    const updated = await Caterer.findByIdAndUpdate(
+      req.caterer._id,
+      { blockedDates },
+      { new: true }
+    );
+    res.json({ message: 'Availability updated!', blockedDates: updated.blockedDates });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
 module.exports = router;

@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
 // GET /api/caterers/:id - Get single caterer with their dishes
 router.get('/:id', async (req, res) => {
   try {
-    const caterer = await Caterer.findById(req.params.id).select('-password');
+    const caterer = await Caterer.findById(req.params.id).select('-password').lean();
     if (!caterer) return res.status(404).json({ message: 'Caterer not found.' });
 
     const dishes = await Dish.find({ catererId: caterer._id, isAvailable: true }).sort({ category: 1, name: 1 });

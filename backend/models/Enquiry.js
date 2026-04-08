@@ -45,6 +45,11 @@ const enquirySchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  type: {
+    type: String,
+    enum: ['enquiry', 'order'],
+    default: 'enquiry'
+  },
   status: {
     type: String,
     enum: ['pending', 'confirmed', 'rejected'],

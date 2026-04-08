@@ -9,7 +9,7 @@ router.post('/', async (req, res) => {
   try {
     const {
       catererId, customerName, customerPhone, eventDate,
-      numberOfPlates, selectedItems, notes
+      numberOfPlates, selectedItems, notes, type
     } = req.body;
 
     if (!catererId || !customerName || !customerPhone || !eventDate || !numberOfPlates) {
@@ -36,7 +36,8 @@ router.post('/', async (req, res) => {
       selectedItems,
       menuPricePerPlate,
       totalPrice,
-      notes: notes || ''
+      notes: notes || '',
+      type: type === 'order' ? 'order' : 'enquiry',
     });
 
     res.status(201).json({ message: 'Enquiry submitted successfully!', enquiry });
