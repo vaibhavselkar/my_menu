@@ -101,7 +101,7 @@ export default function EnquiryPanel({ caterer, selectedItems, onRemoveItem, blo
         )}
       </div>
 
-      {/* Price Summary — plates is read-only, set from URL */}
+      {/* Price Summary */}
       <div className="bg-gray-50 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Calculator size={15} className="text-gray-500" />
@@ -110,7 +110,13 @@ export default function EnquiryPanel({ caterer, selectedItems, onRemoveItem, blo
 
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm text-gray-600">No. of Plates</span>
-          <span className="font-bold text-gray-800 text-sm">{plates} plates</span>
+          <input
+            type="number"
+            min={1}
+            value={plates}
+            onChange={e => setPlates(Math.max(1, Number(e.target.value)))}
+            className="w-24 text-right border border-gray-200 rounded-lg px-2 py-1 text-sm font-bold text-gray-800 focus:outline-none focus:border-saffron-400 focus:ring-2 focus:ring-saffron-100"
+          />
         </div>
 
         {selectedItems.length > 0 && (
