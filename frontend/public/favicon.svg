@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Saffron circle background -->
+  <circle cx="32" cy="32" r="32" fill="#F97316"/>
+
+  <!-- Chef hat -->
+  <ellipse cx="32" cy="38" rx="14" ry="5" fill="white"/>
+  <rect x="20" y="24" width="24" height="16" rx="2" fill="white"/>
+  <!-- Hat puff -->
+  <ellipse cx="32" cy="23" rx="10" ry="9" fill="white"/>
+  <ellipse cx="23" cy="26" rx="7" ry="7" fill="white"/>
+  <ellipse cx="41" cy="26" rx="7" ry="7" fill="white"/>
+
+  <!-- C letter for CaterConnect -->
+  <text x="32" y="36" font-family="Poppins, Arial, sans-serif" font-weight="800" font-size="13" fill="#F97316" text-anchor="middle" dominant-baseline="middle">CC</text>
+</svg>
