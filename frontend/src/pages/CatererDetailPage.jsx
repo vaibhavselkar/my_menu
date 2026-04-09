@@ -61,7 +61,7 @@ export default function CatererDetailPage() {
 
         setSelectedItems(selectedDishes);
 
-        // Get alternatives for unavailable items
+        // Get alternatives for unavailable items from this caterer's menu
         if (unavailableItems.length > 0) {
           getAlternativeSuggestions(unavailableItems, catererDishes, vegParam);
         }
@@ -71,59 +71,45 @@ export default function CatererDetailPage() {
     }
   };
 
-  // Get alternative suggestions for unavailable items
-  const getAlternativeSuggestions = async (unavailableItems, catererDishes, vegFilter) => {
-    try {
-      // Get all dishes from other caterers for suggestions
-      const allDishesRes = await api.get('/dishes/all');
-      const allDishes = allDishesRes.data.dishes;
+  // Get alternative suggestions for unavailable items — from the same caterer only
+  const getAlternativeSuggestions = (unavailableItems, catererDishes, vegFilter) => {
+    const suggestions = [];
 
-      const suggestions = [];
+    unavailableItems.forEach(item => {
+      // Try to guess a category from the item name using common patterns
+      const categoryPatterns = {
+        'Starters': ['Tikka', 'Kabab', 'Roll', 'Puri', 'Bhaji', 'Samosa', 'Lollipop', 'Fry', 'Ball'],
+        'Indian Main Course': ['Curry', 'Masala', 'Paneer', 'Dal', 'Chicken', 'Mutton', 'Fish', 'Egg', 'Kofta', 'Korma', 'Biryani'],
+        'Breads': ['Naan', 'Roti', 'Paratha', 'Poori'],
+        'Rice': ['Rice', 'Biryani', 'Pulao'],
+        'Chinese': ['Noodles', 'Manchurian', 'Chilli', 'Soup', 'Schezwan'],
+        'Sweets': ['Jamun', 'Jalebi', 'Rasgulla', 'Halwa', 'Kheer', 'Ladoo', 'Barfi'],
+        'Desserts': ['Ice Cream', 'Custard', 'Brownie', 'Tukda', 'Rabri', 'Phirni'],
+        'Beverages': ['Chai', 'Lassi', 'Pani', 'Juice', 'Coffee', 'Water', 'Drinks', 'Sharbat'],
+      };
 
-      unavailableItems.forEach(item => {
-        // Find similar dishes (same category, similar name or same type)
-        const similarDishes = allDishes.filter(dish => {
-          // Exclude the current caterer's dishes
-          if (dish.catererId._id === id) return false;
-          
-          // Filter by veg type if specified
-          if (vegFilter === 'true' && !dish.isVeg) return false;
-          if (vegFilter === 'false' && dish.isVeg) return false;
+      let guessedCategory = null;
+      for (const [cat, keywords] of Object.entries(categoryPatterns)) {
+        if (keywords.some(kw => item.toLowerCase().includes(kw.toLowerCase()))) {
+          guessedCategory = cat;
+          break;
+        }
+      }
 
-          // Match by category or similar name patterns
-          const currentItem = catererDishes.find(c => c.name === item);
-          if (currentItem && dish.category === currentItem.category) return true;
-          
-          // Fallback: check if it's a common dish type
-          const commonPatterns = ['Paneer', 'Chicken', 'Mutton', 'Fish', 'Egg', 'Dal', 'Rice', 'Biryani'];
-          return commonPatterns.some(pattern => 
-            dish.name.toLowerCase().includes(pattern.toLowerCase()) ||
-            item.toLowerCase().includes(pattern.toLowerCase())
-          );
-        });
+      // Find dishes from this caterer in the same category (excluding the missing item itself)
+      const alternatives = catererDishes.filter(dish => {
+        if (dish.name === item) return false;
+        if (vegFilter === 'true' && !dish.isVeg) return false;
+        if (vegFilter === 'false' && dish.isVeg) return false;
+        return dish.category === guessedCategory;
+      }).slice(0, 4);
 
-        // Group by caterer and take best options
-        const byCaterer = {};
-        similarDishes.forEach(dish => {
-          if (!byCaterer[dish.catererId._id]) {
-            byCaterer[dish.catererId._id] = {
-              caterer: dish.catererId,
-              dishes: []
-            };
-          }
-          byCaterer[dish.catererId._id].dishes.push(dish);
-        });
+      if (alternatives.length > 0) {
+        suggestions.push({ originalItem: item, alternatives });
+      }
+    });
 
-        suggestions.push({
-          originalItem: item,
-          alternatives: Object.values(byCaterer).slice(0, 3) // Show top 3 caterers
-        });
-      });
-
-      setAlternativeSuggestions(suggestions);
-    } catch (err) {
-      console.error('Error getting alternatives:', err);
-    }
+    setAlternativeSuggestions(suggestions);
   };
 
   const toggleItem = (dish) => {
@@ -270,49 +256,48 @@ export default function CatererDetailPage() {
             <div className="mt-10">
               <div className="flex items-center gap-3 mb-4">
                 <RefreshCw size={20} className="text-saffron-500" />
-                <h3 className="font-display font-bold text-xl text-gray-900">Alternative Options</h3>
+                <h3 className="font-display font-bold text-xl text-gray-900">We suggest instead</h3>
+                <span className="text-sm text-gray-400">from this caterer's menu</span>
               </div>
-              
+
               {alternativeSuggestions.map((suggestion, index) => (
                 <div key={index} className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-sm text-gray-500">Instead of:</span>
-                    <span className="font-semibold text-red-600">{suggestion.originalItem}</span>
+                    <span className="text-sm text-gray-500">"{suggestion.originalItem}" is not available — try:</span>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {suggestion.alternatives.map((alt, altIndex) => (
-                      <div key={altIndex} className="border border-gray-200 rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 bg-saffron-50 rounded-lg flex items-center justify-center">
-                            <ChefHat size={14} className="text-saffron-400" />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-sm text-gray-900">{alt.caterer.businessName}</h4>
-                            <p className="text-xs text-gray-500">{alt.caterer.city}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          {alt.dishes.slice(0, 2).map(dish => (
-                            <div key={dish._id} className="flex items-center justify-between text-xs">
-                              <span className="text-gray-700">{dish.name}</span>
-                              <span className="font-medium text-saffron-600">₹{dish.pricePerPlate}</span>
-                            </div>
-                          ))}
-                          {alt.dishes.length > 2 && (
-                            <div className="text-xs text-gray-400 text-center">+{alt.dishes.length - 2} more</div>
-                          )}
-                        </div>
-                        
-                        <Link
-                          to={`/caterer/${alt.caterer._id}?selected=${encodeURIComponent(JSON.stringify([suggestion.originalItem]))}&plates=${urlParams.plates}&city=${urlParams.city}&veg=${urlParams.veg}`}
-                          className="w-full mt-2 inline-flex items-center justify-center gap-1.5 border border-saffron-200 text-saffron-600 hover:bg-saffron-50 font-semibold py-1.5 rounded-lg text-xs transition-colors"
+
+                  <div className="flex flex-col gap-2">
+                    {suggestion.alternatives.map(dish => {
+                      const isSelected = !!selectedItems.find(d => d._id === dish._id);
+                      return (
+                        <label
+                          key={dish._id}
+                          className={`flex items-center gap-4 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                            isSelected
+                              ? 'border-saffron-400 bg-saffron-50'
+                              : 'border-gray-100 bg-gray-50 hover:border-saffron-200'
+                          }`}
                         >
-                          View Menu
-                        </Link>
-                      </div>
-                    ))}
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleItem(dish)}
+                            className="w-4 h-4 accent-saffron-500 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-gray-900 text-sm">{dish.name}</span>
+                              <span className={`w-3 h-3 rounded-sm border-2 flex items-center justify-center shrink-0
+                                ${dish.isVeg ? 'border-leaf-500' : 'border-spice-500'}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${dish.isVeg ? 'bg-leaf-500' : 'bg-spice-500'}`} />
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-400">{dish.category}</p>
+                          </div>
+                          <span className="font-bold text-saffron-600 shrink-0 text-sm">₹{dish.pricePerPlate}/plate</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
