@@ -153,7 +153,7 @@ catering/
 
 ### 1. Clone the repo
 ```bash
-git clone https://github.com/your-username/caterconnect.git
+git clone https://github.com/vaibhavselkar/my_menu.git
 cd caterconnect
 ```
 
@@ -208,11 +208,11 @@ No extra env vars needed — the frontend proxies `/api` to the backend URL conf
 
 | Segment | Size |
 |---|---|
-| India wedding industry | ~$50 Billion/year |
+| India wedding industry | ~₹4,00,000 Crore/year |
 | Weddings per year | ~10 Million |
-| Catering share of wedding spend | ~$12–15 Billion |
-| Corporate catering | ~$4–5 Billion |
-| **Total Addressable Market** | **~$20 Billion/year** |
+| Catering share of wedding spend | ~₹1,00,000–1,25,000 Crore |
+| Corporate catering | ~₹35,000–40,000 Crore |
+| **Total Addressable Market** | **~₹1,60,000 Crore/year** |
 | Caterers with zero digital presence | **80%** |
 
 ### Traffic Potential
@@ -265,8 +265,8 @@ No extra env vars needed — the frontend proxies `/api` to the backend URL conf
 
 **Vaibhav Selkar**
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin)](https://linkedin.com/in/your-handle)
-[![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?style=for-the-badge&logo=github)](https://github.com/your-username)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/vaibhav-selkar/)
+[![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?style=for-the-badge&logo=github)](https://github.com/vaibhavselkar)
 
 > Open to collaborations, client projects, and opportunities.
 > If you're a caterer who wants to get onboarded — reach out!
