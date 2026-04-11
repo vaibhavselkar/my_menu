@@ -19,43 +19,40 @@ export default function HomePage() {
 
   useEffect(() => {
     const CACHE_KEY = 'cc_dishes_v1';
-    const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+    const CACHE_TTL = 10 * 60 * 1000; // 10 min — survives tab close, reload, new tabs
 
-    // Show cached data instantly while fetching fresh in background
+    const applyDishes = (dishes) => {
+      setAllDishes(dishes);
+      setAvailableCities(
+        [...new Set(dishes.map(d => d.catererId.city))].filter(c => c?.trim()).sort()
+      );
+    };
+
+    // localStorage persists across sessions — returning visitors see data instantly
     try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { dishes, ts } = JSON.parse(cached);
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const { dishes, ts } = JSON.parse(raw);
         if (Date.now() - ts < CACHE_TTL) {
-          setAllDishes(dishes);
-          const cities = [...new Set(dishes.map(d => d.catererId.city))]
-            .filter(c => c && c.trim()).sort();
-          setAvailableCities(cities);
+          applyDishes(dishes);
           setLoading(false);
-          return; // cache is fresh — skip network call entirely
+          return; // fresh cache — skip network entirely
         }
-        // Cache is stale — show it instantly, then refresh in background
-        setAllDishes(dishes);
-        const cities = [...new Set(dishes.map(d => d.catererId.city))]
-          .filter(c => c && c.trim()).sort();
-        setAvailableCities(cities);
+        // Stale but usable — show instantly, refresh silently in background
+        applyDishes(dishes);
         setLoading(false);
       }
-    } catch { /* sessionStorage unavailable */ }
+    } catch { /* storage unavailable */ }
 
-    // Fetch fresh data (background if cache shown, foreground if not)
     api.get('/dishes/all')
       .then(res => {
         const dishes = res.data.dishes;
-        setAllDishes(dishes);
-        const cities = [...new Set(dishes.map(d => d.catererId.city))]
-          .filter(c => c && c.trim()).sort();
-        setAvailableCities(cities);
+        applyDishes(dishes);
         try {
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify({ dishes, ts: Date.now() }));
-        } catch { /* storage full or unavailable */ }
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ dishes, ts: Date.now() }));
+        } catch { /* storage full */ }
       })
-      .catch(() => { if (!allDishes.length) setAllDishes([]); })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -147,8 +144,30 @@ export default function HomePage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {loading ? (
-          <div className="flex items-center justify-center py-32">
-            <div className="w-10 h-10 border-4 border-saffron-500 border-t-transparent rounded-full animate-spin" />
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8 animate-pulse">
+            {/* Header row skeleton */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <div className="h-7 w-44 bg-gray-200 rounded-lg mb-2" />
+                <div className="h-4 w-64 bg-gray-100 rounded" />
+              </div>
+              <div className="flex gap-3">
+                <div className="h-9 w-28 bg-gray-100 rounded-xl" />
+                <div className="h-9 w-20 bg-gray-100 rounded-xl" />
+                <div className="h-9 w-20 bg-gray-100 rounded-xl" />
+              </div>
+            </div>
+            {/* Category skeletons */}
+            {['Starters', 'Indian Main Course', 'Rice', 'Breads', 'Sweets'].map(cat => (
+              <div key={cat} className="mb-6">
+                <div className="h-3 w-24 bg-gray-200 rounded mb-3" />
+                <div className="flex flex-wrap gap-2">
+                  {Array.from({ length: cat === 'Indian Main Course' ? 8 : 5 }).map((_, i) => (
+                    <div key={i} className="h-9 bg-gray-100 rounded-xl" style={{ width: `${70 + (i * 17) % 60}px` }} />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <>
